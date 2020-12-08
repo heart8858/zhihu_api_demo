@@ -7,7 +7,9 @@ class UsersCtl {
         ctx.body = await User.find();
     }
     async findById(ctx) {
-        const user = await User.findById(ctx.params.id);
+        const { fields } = ctx.query;
+        const selectFields = fields.split(';').filter(f => f).map(f => ' +' + f).join('');
+        const user = await User.findById(ctx.params.id).select(selectFields);
         if (!user) {
             ctx.throw(404, '用户不存在');
         }
@@ -26,10 +28,23 @@ class UsersCtl {
         const user = await new User(ctx.request.body).save();
         ctx.body = user;
     }
+    async checkOwner(ctx, next) {
+        if (ctx.params.id !== ctx.state.user._id) {
+            ctx.throw(403, '没有权限');
+        }
+        await next();
+    }
     async update(ctx) {
         ctx.verifyParams({
             name: { type: 'string', required: false },
             password: { type: 'string', required: false },
+            avatar_url: { type: 'string', required: false },
+            gender: { type: 'string', required: false },
+            headline: { type: 'string', required: false },
+            locations: { type: 'array', itemType: 'string', required: false },
+            bussiness: { type: 'string', required: false },
+            employments: { type: 'array', itemType: 'object', required: false },
+            educations: { type: 'array', itemType: 'object', required: false },
         });
         const user = await User.findByIdAndUpdate(ctx.params.id, ctx.request.body);
         if (!user) {
@@ -56,6 +71,21 @@ class UsersCtl {
         const { _id, name } = user;
         const token = jsonwebtoken.sign({ _id, name }, secret, { expiresIn: '1d' });
         ctx.body = { token };
+    }
+    async listFollowing(ctx) {
+        const user = await User.findById(ctx.params.id).select('+following').populate('following');
+        if (!user) { ctx.throw(404); }
+        ctx.body = user.following;
+    }
+    async follow(ctx) {
+        const me = await User.findById(ctx.state.user._id).select('+following');
+        // 如果已经关注则不push进关注列表，并将关注列表每个id转为字符串
+        if (!me.following.map(id => id.toString()).includes(ctx.params.id)) {
+            me.following.push(ctx.params.id);
+            // 保存在数据库
+            me.save();
+        }
+        ctx.status = 204;
     }
 }
 
