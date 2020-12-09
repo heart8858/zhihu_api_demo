@@ -77,11 +77,26 @@ class UsersCtl {
         if (!user) { ctx.throw(404); }
         ctx.body = user.following;
     }
+    async listFollowers(ctx) {
+        // 请求用户列表，条件是关注了某人
+        const users = await User.find({ following: ctx.params.id })
+        ctx.body = users;
+    }
     async follow(ctx) {
         const me = await User.findById(ctx.state.user._id).select('+following');
         // 如果已经关注则不push进关注列表，并将关注列表每个id转为字符串
         if (!me.following.map(id => id.toString()).includes(ctx.params.id)) {
             me.following.push(ctx.params.id);
+            // 保存在数据库
+            me.save();
+        }
+        ctx.status = 204;
+    }
+    async unfollow(ctx) {
+        const me = await User.findById(ctx.state.user._id).select('+following');
+        const index = me.following.map(id => id.toString()).indexOf(ctx.params.id);
+        if (index > -1) {
+            me.following.splice(index, 1);
             // 保存在数据库
             me.save();
         }

@@ -3,8 +3,9 @@ const Router = require('koa-router');
 const router = new Router({ prefix: '/users' });
 const { find, findById, create, update,
     delete: del, login, checkOwner,
-    listFollowing, follow } = require('../controllers/users');
-const { secret } = require('../config')
+    listFollowing, follow, unfollow, listFollowers } = require('../controllers/users');
+const { secret } = require('../config');
+const { route } = require('./home');
 
 // const auth = async (ctx, next) => {
 //     const { authorization = '' } = ctx.request.header;
@@ -35,6 +36,11 @@ router.post('/login', login);
 
 router.get('/:id/following', listFollowing);
 
+router.get('/:id/followers', listFollowers);
+
 router.put('/following/:id', auth, follow);
+
+router.delete('/following/:id', auth, unfollow);
+
 
 module.exports = router;
