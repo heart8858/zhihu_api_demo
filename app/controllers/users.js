@@ -82,6 +82,11 @@ class UsersCtl {
         const users = await User.find({ following: ctx.params.id })
         ctx.body = users;
     }
+    async checkUserExist(ctx, next) {
+        const user = await User.findById(ctx.params.id);
+        if (!user) { ctx.throw(403, '用户不存在'); }
+        await next()
+    }
     async follow(ctx) {
         const me = await User.findById(ctx.state.user._id).select('+following');
         // 如果已经关注则不push进关注列表，并将关注列表每个id转为字符串
